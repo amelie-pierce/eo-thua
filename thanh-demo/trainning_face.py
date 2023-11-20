@@ -3,6 +3,7 @@ import tkinter as tk
 import os
 from tkinter import filedialog
 import time
+import datetime
 
 def is_camera_stable(camera, threshold):
     # Capture two frames from the camera
@@ -38,7 +39,11 @@ if not os.path.exists(training_faces_dir):
 def start_face_detection():
     name = name_entry.get()  # Get the name from the entry field
     count = 0
-    total_images = 5
+    total_images = 10
+
+    # Delay time for take a photo
+    last_second = -1
+    delay_time_second = 1
 
     # Start the camera
     camera = cv2.VideoCapture(0)  # Use 0 for default webcam, change the index if using other cameras
@@ -47,36 +52,47 @@ def start_face_detection():
     while not is_camera_stable(camera, 10):
         time.sleep(0.1)  # Wait for a short period before checking again
 
-    ret, frame = camera.read()
-    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    
     while count < total_images:
+        ret, _frame = camera.read()
+        # Flip the frame horizontally
+        frame = cv2.flip(_frame, 1)
+
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        cur_second = datetime.datetime.now().second
         # Display a countdown before capturing an image
-        countdown = 5
-        cv2.rectangle(frame, (10, 20), (200, 40), (0, 0, 0), -1)
-        while countdown > 0:
-            # Clear the area where the countdown text will be displayed
-            cv2.rectangle(frame, (10, 20), (200, 40), (0, 0, 0), -1)
-            countdown_text = f"Capture in: {countdown}"
-            cv2.putText(frame, countdown_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.imshow('Face Detection', frame)
-            time.sleep(1)
-            countdown -= 1
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+        # countdown = 5
+        # cv2.rectangle(frame, (10, 20), (200, 40), (0, 0, 0), -1)
+        # while countdown > 0:
+        #     # Clear the area where the countdown text will be displayed
+        #     cv2.rectangle(frame, (10, 20), (200, 40), (0, 0, 0), -1)
+        #     countdown_text = f"Capture in: {countdown}"
+        #     cv2.putText(frame, countdown_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        #     cv2.imshow('Face Detection', frame)
+        #     time.sleep(1)
+        #     countdown -= 1
+        #     if cv2.waitKey(1) & 0xFF == ord('q'):
+        #         break
 
         # Perform face detection on the grayscale frame
-        faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=14, minSize=(30, 30))
 
         for (x, y, w, h) in faces:
             # Draw rectangles around detected faces
             cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
 
-            # Save the detected face as an image with the given name
-            face_img = gray_frame[y:y+h, x:x+w]
-            count += 1
-            face_img_path = os.path.join(training_faces_dir, f'{name}_{count}.jpg')
-            cv2.imwrite(face_img_path, face_img)
+            if(last_second < 0 or last_second >= 59):
+                last_second = cur_second
+
+            if(cur_second - last_second >= delay_time_second):
+                # Save the detected face as an image with the given name
+                face_img = gray_frame[y:y+h, x:x+w]
+                count += 1
+                last_second = cur_second
+                face_img_path = os.path.join(training_faces_dir, f'{name}_{count}.jpg')
+                cv2.imwrite(face_img_path, face_img)
+                # Training one face in 1 frame
+            break
 
         # Display the progress label on the live camera feed
         progress_text = f'Progress: {count}/{total_images}'
@@ -88,9 +104,9 @@ def start_face_detection():
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-        # Capture a new frame for the next iteration
-        ret, frame = camera.read()
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # # Capture a new frame for the next iteration
+        # ret, frame = camera.read()
+        # gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     camera.release()
     cv2.destroyAllWindows()
@@ -163,3 +179,12 @@ upload_button.config(state='disabled')
 upload_button.pack()
 
 root.mainloop()
+
+
+async def main():
+    # Start the asynchronous tasks
+    task_timer_func = asyncio.create_task(timer_func())
+    task_display_camera = asyncio.create_task(display_camera_with_counter())
+
+    # Wait for both tasks to complete
+    await asyncio.gather(task_counter, task_display_camera)

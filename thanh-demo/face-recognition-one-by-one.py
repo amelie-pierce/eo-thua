@@ -20,7 +20,7 @@ def get_face_embeddings(image):
 
     # Perform face detection
     # 
-    faces = face_cascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+    faces = face_cascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=13, minSize=(100, 100))
 
 
     if len(faces) > 0:
@@ -80,7 +80,9 @@ def recognize_faces(frame):
 camera = cv2.VideoCapture(0)  # Use 0 for default webcam, change the index if using other cameras
 
 while True:
-    ret, frame = camera.read()
+    ret, _frame = camera.read()
+    frame = cv2.flip(_frame, 1)
+
 
     if not ret:
         break
