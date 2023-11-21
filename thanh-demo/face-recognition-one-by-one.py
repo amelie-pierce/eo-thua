@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 import os
+import pygame
+import time
 
 # Load pre-trained models for face detection and recognition
 # detector = cv2.dnn.readNetFromCaffe('deploy.prototxt', 'res10_300x300_ssd_iter_140000.caffemodel')
@@ -70,6 +72,8 @@ for filename in os.listdir(images_folder):
 
 # Function for face recognition using the known embeddings and names
 def recognize_faces(frame):
+    global alarm_played 
+    alarm_played = False
     face_embedding = get_face_embeddings(frame)
     if(not known_embeddings):
         return 'Unknown'
@@ -82,6 +86,12 @@ def recognize_faces(frame):
         # Set a threshold for face recognition
         if min_distance < 0.6:  # Adjust threshold as needed
             recognized_name = known_names[min_distance_idx]
+            if not alarm_played:
+             # Play an alarm sound when a face is detected
+                pygame.mixer.init()
+                pygame.mixer.music.load('alarm-1.mp3')  # Replace with your desired alarm sound path
+                pygame.mixer.music.play()
+                alarm_played = True
             return recognized_name
         else:
             return 'Unknown'
