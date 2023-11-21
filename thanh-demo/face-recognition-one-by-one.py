@@ -6,6 +6,7 @@ import os
 # detector = cv2.dnn.readNetFromCaffe('deploy.prototxt', 'res10_300x300_ssd_iter_140000.caffemodel')
 embedder = cv2.dnn.readNetFromTorch('openface.nn4.small2.v1.t7')
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye_tree_eyeglasses.xml')
 
 # Directory containing images for face recognition
 images_folder = 'known_faces'
@@ -31,6 +32,15 @@ def get_face_embeddings(image):
         for (x, y, w, h) in faces:
             cv2.rectangle(image, (x, y), (x+w, y+h), (255, 0, 0), 2)
             face = image[y:y+h, x:x+w]
+
+            # eyes detection
+            face_gray = gray_image[y:y+h, x:x+w]
+            eyes = eye_cascade.detectMultiScale(face_gray, scaleFactor=1.1, minNeighbors=10)
+            # draw a rectangle around eyes
+            for (ex,ey,ew,eh) in eyes:
+                cv2.rectangle(face,(ex,ey),(ex+ew,ey+eh),(0,255,255),2)
+            # end eyes detection
+
             face_blob = cv2.dnn.blobFromImage(face, 1.0 / 255, (96, 96), (0, 0, 0), swapRB=True, crop=False)
             embedder.setInput(face_blob)
             vec = embedder.forward()
@@ -61,6 +71,8 @@ for filename in os.listdir(images_folder):
 # Function for face recognition using the known embeddings and names
 def recognize_faces(frame):
     face_embedding = get_face_embeddings(frame)
+    if(not known_embeddings):
+        return 'Unknown'
     if face_embedding is not None:
         # Compare face embeddings with known faces
         distances = np.linalg.norm(np.array(known_embeddings) - face_embedding, axis=1)
