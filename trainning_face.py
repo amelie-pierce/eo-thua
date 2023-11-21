@@ -40,6 +40,10 @@ def start_face_detection():
     name = name_entry.get()  # Get the name from the entry field
     count = 0
     total_images = 10
+    
+     # Create a folder with the user's name inside the 'known_faces' directory
+    user_faces_dir = os.path.join(training_faces_dir, name)
+    os.makedirs(user_faces_dir, exist_ok=True)
 
     # Delay time for take a photo
     last_second = -1
@@ -89,7 +93,7 @@ def start_face_detection():
                 face_img = gray_frame[y:y+h, x:x+w]
                 count += 1
                 last_second = cur_second
-                face_img_path = os.path.join(training_faces_dir, f'{name}_{count}.jpg')
+                face_img_path = os.path.join(user_faces_dir, f'{name}_{count}.jpg')
                 cv2.imwrite(face_img_path, face_img)
                 # Training one face in 1 frame
             break
