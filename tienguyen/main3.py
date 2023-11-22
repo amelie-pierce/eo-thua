@@ -105,11 +105,11 @@ def add_user():
             break
 
         # Convert the BGR image to RGB
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = face_detection.process(image)
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        results = face_detection.process(rgb_image)
 
         # Convert the image back to BGR color space
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        # image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
         # Draw face detections
         if results.detections:
@@ -135,7 +135,13 @@ def add_user():
             # Save the image in the 'known_faces' folder
             if not os.path.exists('known_faces'):
                 os.makedirs('known_faces')
-            cv2.imwrite(f'known_faces/{name}.jpg', image)
+            detection = results.detections[0]
+            x = int(detection.location_data.relative_bounding_box.xmin * image.shape[1])
+            y = int(detection.location_data.relative_bounding_box.ymin * image.shape[0])
+            w = int(detection.location_data.relative_bounding_box.width * image.shape[1])
+            h = int(detection.location_data.relative_bounding_box.height * image.shape[0])
+            face_img = image[y:y+h, x:x+w]
+            cv2.imwrite(f'known_faces/{name}.jpg', face_img)
             cap.release()
             cv2.destroyWindow('Capture User Face')
 
@@ -146,21 +152,21 @@ def identify_face(image):
     # rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     # Find all face locations in the image
-    face_locations = face_recognition.face_locations(image)
+    face_locations = face_recognition.face_locations(image, model="hog")
 
     # Convert the image back to BGR color space
     # rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2BGR)
 
+    print('num of faces: ', len(face_locations))
     for face_location in face_locations:
-        print(face_location)
-        top, right, bottom, left = face_location
-        face_image = image[top:bottom, left:right]
-        print(face_image)
+        # top, right, bottom, left = face_location
+        # face_image = image[top:bottom, left:right]
+        # print(face_image)
+
         # Loop over all known faces
         for filename in os.listdir('known_faces'):
-            if filename.endswith('.jpg'):
+            if filename.endswith(('.jpg', '.jpeg', '.png', '.gif')):
                 user_name = os.path.splitext(filename)[0]
-                print(user_name)
                 user_image = cv2.imread(os.path.join('known_faces', filename))
 
                 # Convert the user image from BGR to RGB
@@ -169,69 +175,70 @@ def identify_face(image):
                 # Create a face encoding for the user image
                 user_face_encoding = face_recognition.face_encodings(rgb_user_image)[0]
 
-                # Find the face landmarks
-                # face_landmarks = face_recognition.face_landmarks(face_image)
-
-                # If face landmarks are found, compute the face encoding
-                # if face_landmarks:
-                face_encoding = face_recognition.face_encodings(image, known_face_locations=[face_location])[0]
+                rgb_face_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                face_encoding = face_recognition.face_encodings(rgb_face_image, known_face_locations=[face_location])[0]
 
                 # Compare the face encoding with the user face encoding
-                match = face_recognition.compare_faces([user_face_encoding], face_encoding)
-                print(match)
+                match = face_recognition.compare_faces([user_face_encoding], face_encoding, tolerance=0.5)
+                # print(match)
                 if match[0]:
                     return user_name
 
     return None
+
 
 def detect_faces():
     cap = cv2.VideoCapture(0)
     cv2.namedWindow('MediaPipe Face Detection', cv2.WINDOW_NORMAL)
 
     while cap.isOpened():
+        process_this_frame = True
         success, image = cap.read()
         if not success:
             break
 
-        image = cv2.resize(image, (640, 360))
+        if process_this_frame:
+            image = cv2.resize(image, (640, 360))
 
-        # Convert the BGR image to RGB
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = face_detection.process(image)
+            # Convert the BGR image to RGB
+            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            results = face_detection.process(rgb_image)
 
-        # Convert the image back to BGR color space
-        # image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            # Convert the image back to BGR color space
+            # image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-        # Draw face detections
-        if results.detections:
-            for detection in results.detections:
-                # For now, we'll just use a placeholder function
-                user_name = identify_face(image)
+            # Draw face detections
+            if results.detections:
+                for detection in results.detections:
+                    # For now, we'll just use a placeholder function
+                    user_name = identify_face(image)
 
-                # Convert the image back to BGR color space
-                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                    # Convert the image back to BGR color space
+                    # image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-                # Draw a box around the face
-                x = int(detection.location_data.relative_bounding_box.xmin * image.shape[1])
-                y = int(detection.location_data.relative_bounding_box.ymin * image.shape[0])
-                w = int(detection.location_data.relative_bounding_box.width * image.shape[1])
-                h = int(detection.location_data.relative_bounding_box.height * image.shape[0])
-                if user_name:
-                    color = (0, 255, 0)  # Green
-                else:
-                    color = (0, 0, 255)  # Red
-                    user_name = "unknown"
-                cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-                # Put the user's name below the box
-                cv2.putText(image, user_name, (x, y + h + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+                    # Draw a box around the face
+                    x = int(detection.location_data.relative_bounding_box.xmin * image.shape[1])
+                    y = int(detection.location_data.relative_bounding_box.ymin * image.shape[0])
+                    w = int(detection.location_data.relative_bounding_box.width * image.shape[1])
+                    h = int(detection.location_data.relative_bounding_box.height * image.shape[0])
+                    if user_name:
+                        color = (0, 255, 0)  # Green
+                    else:
+                        color = (0, 0, 255)  # Red
+                        user_name = "unknown"
+                    cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
+                    # Put the user's name below the box
+                    cv2.putText(image, user_name, (x, y + h + 20), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
-        # Display the image
-        cv2.resizeWindow('MediaPipe Face Detection', 640, 360)
-        cv2.imshow('MediaPipe Face Detection', image)
-        if cv2.waitKey(5) & 0xFF == 27:
-            break
+            # Display the image
+            cv2.resizeWindow('MediaPipe Face Detection', 640, 360)
+            cv2.imshow('MediaPipe Face Detection', image)
+            if cv2.waitKey(5) & 0xFF == 27:
+                break
+        process_this_frame = not process_this_frame
 
     cap.release()
+
 
 
 name_label = tk.Label(root, text="Name")
