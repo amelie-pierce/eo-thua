@@ -4,6 +4,7 @@ import os
 from tkinter import filedialog
 import time
 import datetime
+import face_recognition
 
 def is_camera_stable(camera, threshold):
     # Capture two frames from the camera
@@ -47,7 +48,7 @@ def start_face_detection():
 
     # Delay time for take a photo
     last_second = -1
-    delay_time_second = 1
+    delay_time_second = 2
 
     # Start the camera
     camera = cv2.VideoCapture(0)  # Use 0 for default webcam, change the index if using other cameras
@@ -79,18 +80,21 @@ def start_face_detection():
         #         break
 
         # Perform face detection on the grayscale frame
-        faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=14, minSize=(30, 30))
+        # faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=14, minSize=(30, 30))
 
-        for (x, y, w, h) in faces:
+        face_locations = face_recognition.face_locations(gray_frame, number_of_times_to_upsample = 1)
+
+
+        for (top, right, bottom, left) in face_locations:
             # Draw rectangles around detected faces
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+            cv2.rectangle(frame, (left, top), (right, bottom), (255, 0, 0), 2)
 
             if(last_second < 0 or last_second >= 59):
                 last_second = cur_second
 
             if(cur_second - last_second >= delay_time_second):
                 # Save the detected face as an image with the given name
-                face_img = gray_frame[y:y+h, x:x+w]
+                face_img = gray_frame[top:bottom, left:right]
                 count += 1
                 last_second = cur_second
                 face_img_path = os.path.join(user_faces_dir, f'{name}_{count}.jpg')

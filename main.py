@@ -2,7 +2,7 @@ import cv2
 import face_recognition
 import threading
 import os
-from tkinter import Tk, Label, Entry, Button, Frame
+from tkinter import Tk, Label, Entry, Button, Frame, messagebox
 from PIL import Image, ImageTk
 
 known_faces_dir = 'known_faces'
@@ -128,7 +128,7 @@ def camera_thread():
                     # Loop through each face found in the frame
                     for (top, right, bottom, left) in face_locations:
                         # See if the face matches any known faces
-                        matches = face_recognition.compare_faces(user_encodings, face_encoding, tolerance=0.5)
+                        matches = face_recognition.compare_faces(user_encodings, face_encoding, tolerance=0.4)
 
                         # Check if we found a match
                         if True in matches:
@@ -178,11 +178,8 @@ def _quit():
 def close_camera():
     global count
     count +=1
-    print(count)
     global camera_opened, video_capture
-    print(camera_opened)
     camera_opened = False
-    print(camera_opened)
     
     if 'video_capture' in globals():
         video_capture.release()
