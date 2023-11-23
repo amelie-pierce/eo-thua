@@ -86,11 +86,8 @@ def log(text):
 
 # Function for the camera thread
 def camera_thread():
-    # global count
-    # print(count)
     global video_capture, camera_opened
     # video_capture = cv2.VideoCapture(0)
-    # print(camera_opened)
 
     # while camera_opened:
     #     ret, frame = video_capture.read()
@@ -176,10 +173,8 @@ def camera_thread():
                                     face_encoding = face_encodings[0]
                                     # See if the face matches any known faces
                                     matches = face_recognition.compare_faces(user_encodings, face_encoding, tolerance=0.7)
-                                    print('check matches')
                                     # Check if we found a match
                                     if True in matches:
-                                        print('match')
                                         first_match_index = matches.index(True)
                                         found_name = user_names[first_match_index]
                                         log(text=datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + found_name)

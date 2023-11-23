@@ -5,23 +5,21 @@ import os
 from tkinter import Tk, Label, Entry, Button, Frame, messagebox
 from PIL import Image, ImageTk
 import datetime
-# from json_handler import save_data_to_json, load_data_from_json
 
 known_faces_dir = 'known_faces'
-
-global face_detection_encodings
-face_detection_encodings = []
-
 global user_encodings, user_names
 user_encodings = []
 user_names = []
-
-
-def compare_faces():
-    global face_detection_encodings
-    # while True:
-    #     if face_detection_encodings and camera_opened:
-    #         print(datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + 'compare_faces: ' + str(len(face_detection_encodings)))
+camera_opened = True
+global ready 
+ready = False
+# user detected count
+user_count = {}
+# detected detected_times for make sure right person
+detected_times = 2
+skipped_frame = 4
+# less tolerance => high accuracy compare faces
+tolerance=0.4
 
 # Function to load images and perform face recognition
 def recognize_faces_in_folder(folder_path):
@@ -43,7 +41,7 @@ def recognize_faces_in_folder(folder_path):
 
 def init_knowns_faces():
     print('Loop knowns face folder...')
-    global user_encodings, user_names
+    global user_encodings, user_names, ready
     for root, dirs, _ in os.walk(known_faces_dir):
         for user_folder in dirs:
             user_folder_path = os.path.join(root, user_folder)
@@ -51,18 +49,29 @@ def init_knowns_faces():
             encodings, names = recognize_faces_in_folder(user_folder_path)
             user_encodings.extend(encodings)
             user_names.extend(names)
+    ready = True
     print(user_names)
-    # print('Loading data....')
-    # global user_encodings, user_names
-    # loaded_data = load_data_from_json()
-    # print("Data loaded:")
-    # user_encodings = loaded_data.get("user_encodings", [])
-    # user_names = loaded_data.get("user_names", [])
-    # print(user_names)
-            
-# Flag to check if camera is open
-camera_opened = True
-count = 12
+    log(text="Loaded known_faces")
+    
+    
+# init_knowns_faces()
+init_knowns_faces_thread=threading.Thread(target=init_knowns_faces)
+init_knowns_faces_thread.start()
+
+def get_current_time():
+    return datetime.datetime.now().strftime("%Y/%m/%d-%H:%M:%S")
+
+def update_detected_label(text):
+    current_text = detected_label.cget("text")
+    lines = current_text.split('\n')
+
+    # Limit the number of lines to 10
+    if len(lines) >= 10:
+        lines = lines[:-1]  # Remove the oldest line
+
+    new_text = '\n'.join([text] + lines)
+    detected_label.config(text=new_text)
+    
 
 def log(text):
     current_text = log_label.cget("text")
@@ -79,11 +88,8 @@ def log(text):
 
 # Function for the camera thread
 def camera_thread():
-    # global count
-    # print(count)
-    global video_capture, camera_opened
+    global video_capture, user_encodings, user_names, ready, camera_opened, skipped_frame, tolerance
     # video_capture = cv2.VideoCapture(0)
-    # print(camera_opened)
 
     # while camera_opened:
     #     ret, frame = video_capture.read()
@@ -98,12 +104,10 @@ def camera_thread():
 
     # video_capture.release()
     # Load known faces and their encodings
-    global face_detection_encodings
-    global user_encodings, user_names
+    # global face_detection_encodings
     known_faces_encodings = []
     known_faces_names = []
     found_name = ""
-    skipped_frame = 6
     frame_index = 0
 
 
@@ -114,7 +118,7 @@ def camera_thread():
     video_capture = cv2.VideoCapture(0)
 
     while camera_opened:
-        live_time = datetime.datetime.now().strftime("%Y/%m/%d-%H:%M:%S")
+        live_time = get_current_time()
         ret, _frame0 = video_capture.read()
         # _frame = cv2.resize(_frame0, (320, 240))
         # _frame = cv2.resize(_frame0, (640, 480))
@@ -126,6 +130,13 @@ def camera_thread():
         # put time
         cv2.putText(rgb_frame,live_time , (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 165, 0), 2)
     
+        if(not ready):
+            frame = Image.fromarray(rgb_frame)
+            frame = ImageTk.PhotoImage(image=frame)
+            label.config(image=frame)
+            label.image = frame
+            continue
+        
         # gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # , model='hog'
         face_locations = face_recognition.face_locations(rgb_frame, number_of_times_to_upsample = 1, model='hog')
@@ -133,8 +144,10 @@ def camera_thread():
                 cv2.rectangle(rgb_frame, (left, top), (right, bottom), (255, 165, 0), 2)
                 # break
 
+       
+
         if(frame_index >= skipped_frame):
-            face_detection_encodings = []
+            # face_detection_encodings = []
             frame_index = 0
             found_name="Unknown"
             # Find all face locations and encodings in the current frame
@@ -154,7 +167,7 @@ def camera_thread():
                 # facesv1 = [item[0] for item in faces]
                 # [face_locations[0]]
                 face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
-                face_detection_encodings = face_encodings
+                # face_detection_encodings = face_encodings
                 # print(face_encodings)
                 
                 if(face_encodings):
@@ -164,7 +177,7 @@ def camera_thread():
                         # Loop through each face found in the frame
                         # for (top, right, bottom, left) in face_locations:
                         # See if the face matches any known faces
-                        matches = face_recognition.compare_faces(user_encodings, face_encoding, tolerance=0.4)
+                        matches = face_recognition.compare_faces(user_encodings, face_encoding, tolerance=tolerance)
 
                         # Check if we found a match
                         if True in matches:
@@ -207,15 +220,27 @@ def camera_thread():
     video_capture.release()
     cv2.destroyAllWindows()
 
+def update_count(found_name):
+    user_count[found_name] = user_count.get(found_name, 0) + 1
+
 def on_found_name(found_name):
-    print(found_name) 
     if(found_name == 'Unknown'):
-        # TODO:
         count_unknown=1
     else:
-        # TODO:
-        count_unknown=1
-    
+        update_count(found_name)
+        if (user_count[found_name] == detected_times):
+            print(f"User: {found_name} = {detected_times} times")
+            update_detected_label(get_current_time() + ': ' + found_name)
+            # TODO: A Dũng chỗ này xử lý popup success hiện thông user lên được nè (multiple face/frame luôn nha)
+            # sau đó click reset lại user_count[found_name] thì mới vào đây lần nữa
+            # => đã chấm công rồi thì không bị chấm trùng lặp
+  
+  
+def reset_last_detection_data():
+    global user_count
+    detected_label.config(text='')
+    user_count = {}
+      
 
 # Function to handle login button click
 def login_clicked():
@@ -229,18 +254,16 @@ def login_clicked():
         messagebox.showerror("Login", "Invalid username or password")
 
 def _quit():
+    global root
     root.quit()     
     root.destroy()
 
 # Function to close the camera stream and window
 def close_camera():
-    global count
-    count +=1
     global camera_opened, video_capture
     camera_opened = False
-    
-    if 'video_capture' in globals():
-        video_capture.release()
+    if video_capture:
+     video_capture.release()
     _quit()
 
 # Function to confirm exit with "Ctrl + q"
@@ -249,13 +272,6 @@ def confirm_exit(event):
         confirm = messagebox.askokcancel("Confirm Exit", "Are you sure you want to exit?")
         if confirm:
             close_camera()
-
-# init_knowns_faces()
-# Init known faces
-init_knowns_faces()
-# init_knowns_faces_thread=threading.Thread(target=init_knowns_faces)
-# init_knowns_faces_thread.start()
-
 
 # Create main window
 root = Tk()
@@ -293,16 +309,17 @@ right_frame.pack(side='right', fill='both', expand=True)
 label = Label(right_frame)
 label.pack(fill='both', expand=True)
 
-log_label = Label(left_frame, text='Logs...')
+log_label = Label(left_frame, text='Loading known_faces...')
 log_label.grid(row=4, columnspan=2,  pady=10 )
 
+detected_label_font = ('Arial', 14, 'bold')
+detected_label = Label(left_frame, text='', font=detected_label_font) # fg='#FFA500'
+detected_label.grid(row=5, columnspan=2,  pady=10 )
 
-# # Init known faces
-# # init_knowns_faces()
-# init_knowns_faces_thread=threading.Thread(target=init_knowns_faces)
-# init_knowns_faces_thread.start()
+login_button = Button(left_frame, text='Reset detected data', command=reset_last_detection_data)
+login_button.grid(row=6, columnspan=2, pady=10)
 
-# Start camera thread
+# # Start camera thread
 camera_thread = threading.Thread(target=camera_thread)
 camera_thread.start()
 
@@ -315,6 +332,6 @@ root.protocol("WM_DELETE_WINDOW", close_camera)
 # Bind Ctrl + q to confirm exit
 root.bind_all("<Control-q>", confirm_exit)
 
-
 root.mainloop()
+
 
