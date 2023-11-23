@@ -272,22 +272,22 @@ right_frame = Frame(root)
 right_frame.pack(side='right', fill='both', expand=True)
 
 # Label in the left frame for displaying 'Login'
-hello_label = Label(left_frame, text='Login', font=('Arial', 20))
-hello_label.grid(row=0, column=0, columnspan=2, pady=10)
+# hello_label = Label(left_frame, text='Login', font=('Arial', 20))
+# hello_label.grid(row=0, column=0, columnspan=2, pady=10)
 
 # Login form components
-username_label = Label(left_frame, text='Username:')
-username_label.grid(row=1, column=0)
-username_entry = Entry(left_frame)
-username_entry.grid(row=1, column=1)
+# username_label = Label(left_frame, text='Username:')
+# username_label.grid(row=1, column=0)
+# username_entry = Entry(left_frame)
+# username_entry.grid(row=1, column=1)
 
-password_label = Label(left_frame, text='Password:')
-password_label.grid(row=2, column=0)
-password_entry = Entry(left_frame, show='*')
-password_entry.grid(row=2, column=1)
+# password_label = Label(left_frame, text='Password:')
+# password_label.grid(row=2, column=0)
+# password_entry = Entry(left_frame, show='*')
+# password_entry.grid(row=2, column=1)
 
-login_button = Button(left_frame, text='Login', command=login_clicked)
-login_button.grid(row=3, columnspan=2, pady=10)
+# login_button = Button(left_frame, text='Login', command=login_clicked)
+# login_button.grid(row=3, columnspan=2, pady=10)
 
 # # Label in the right frame for displaying camera stream
 label = Label(right_frame)
