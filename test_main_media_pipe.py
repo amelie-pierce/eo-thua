@@ -8,6 +8,7 @@ import datetime
 
 import mediapipe as mp
 mp_face_detection = mp.solutions.face_detection
+from mediapipe.python.solutions import drawing_utils as mp_drawing
 from media_pipe_utils import _normalized_to_pixel_coordinates
 
 eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye_tree_eyeglasses.xml')
@@ -129,11 +130,12 @@ def camera_thread():
             # _frame = cv2.resize(_frame0, (640, 480))
             frame = cv2.flip(_frame0, 1)
             frame.flags.writeable = False
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = face_detection.process(frame)
             if results.detections:
                 for detection in results.detections:
-                    # mp_drawing.draw_detection(image, detection)
+                    # mp_drawing.draw_detection(frame, detection)
                     location = detection.location_data
                     if location.HasField('relative_bounding_box'):
                         image_rows, image_cols, _ = frame.shape
@@ -168,19 +170,19 @@ def camera_thread():
                                 #     cv2.rectangle(frame,(x +ex, y+ ey),(x + ex + ew,y+ey +eh),(0,255,255),2)
                                 # encode face
                                 
-                                face_encodings = face_recognition.face_encodings(frame, [(y,w,h,x)])
-                                if(face_encodings):
-                                    face_encoding = face_encodings[0]
-                                    # See if the face matches any known faces
-                                    matches = face_recognition.compare_faces(user_encodings, face_encoding, tolerance=0.7)
-                                    # Check if we found a match
-                                    if True in matches:
-                                        first_match_index = matches.index(True)
-                                        found_name = user_names[first_match_index]
-                                        log(text=datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + found_name)
-                                        break
+                                # face_encodings = face_recognition.face_encodings(frame, [(y,w,h,x)])
+                                # if(face_encodings):
+                                #     face_encoding = face_encodings[0]
+                                #     # See if the face matches any known faces
+                                #     matches = face_recognition.compare_faces(user_encodings, face_encoding, tolerance=0.7)
+                                #     # Check if we found a match
+                                #     if True in matches:
+                                #         first_match_index = matches.index(True)
+                                #         found_name = user_names[first_match_index]
+                                #         log(text=datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + found_name)
+                                #         break
                                 # # en
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame = Image.fromarray(frame)
             frame = ImageTk.PhotoImage(image=frame)
             label.config(image=frame)
@@ -300,6 +302,7 @@ left_frame.pack(side='left', fill='both', expand=True)
 
 right_frame = Frame(root)
 right_frame.pack(side='right', fill='both', expand=True)
+
 
 # Label in the left frame for displaying 'Login'
 hello_label = Label(left_frame, text='Login', font=('Arial', 20))
