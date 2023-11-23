@@ -40,7 +40,7 @@ if not os.path.exists(training_faces_dir):
 def start_face_detection():
     name = name_entry.get()  # Get the name from the entry field
     count = 0
-    total_images = 10
+    total_images = 5
     
      # Create a folder with the user's name inside the 'known_faces' directory
     user_faces_dir = os.path.join(training_faces_dir, name)
@@ -59,6 +59,8 @@ def start_face_detection():
 
     while count < total_images:
         ret, _frame = camera.read()
+        if not ret:
+            continue
         # Flip the frame horizontally
         frame = cv2.flip(_frame, 1)
 
@@ -82,16 +84,16 @@ def start_face_detection():
         # Perform face detection on the grayscale frame
         # faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=14, minSize=(30, 30))
 
-        face_locations = face_recognition.face_locations(gray_frame, number_of_times_to_upsample = 1)
-
+        face_locations = face_recognition.face_locations(gray_frame, number_of_times_to_upsample = 1, model='hog')
 
         for (top, right, bottom, left) in face_locations:
             # Draw rectangles around detected faces
-            cv2.rectangle(frame, (left, top), (right, bottom), (255, 0, 0), 2)
+            cv2.rectangle(frame, (left, top), (right, bottom), (255, 165, 0), 2)
 
             if(last_second < 0 or last_second >= 59):
                 last_second = cur_second
-
+            # print(top, right, bottom, left)
+            # print(last_second, cur_second)
             if(cur_second - last_second >= delay_time_second):
                 # Save the detected face as an image with the given name
                 face_img = gray_frame[top:bottom, left:right]
@@ -104,7 +106,7 @@ def start_face_detection():
 
         # Display the progress label on the live camera feed
         progress_text = f'Progress: {count}/{total_images}'
-        cv2.putText(frame, progress_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv2.putText(frame, progress_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 165, 0), 2)
 
         # Display the frame with rectangles around detected faces
         cv2.imshow('Face Detection', frame)

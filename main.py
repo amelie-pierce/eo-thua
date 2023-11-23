@@ -4,12 +4,24 @@ import threading
 import os
 from tkinter import Tk, Label, Entry, Button, Frame, messagebox
 from PIL import Image, ImageTk
+import datetime
+# from json_handler import save_data_to_json, load_data_from_json
 
 known_faces_dir = 'known_faces'
+
+global face_detection_encodings
+face_detection_encodings = []
+
 global user_encodings, user_names
 user_encodings = []
 user_names = []
 
+
+def compare_faces():
+    global face_detection_encodings
+    # while True:
+    #     if face_detection_encodings and camera_opened:
+    #         print(datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + 'compare_faces: ' + str(len(face_detection_encodings)))
 
 # Function to load images and perform face recognition
 def recognize_faces_in_folder(folder_path):
@@ -40,6 +52,13 @@ def init_knowns_faces():
             user_encodings.extend(encodings)
             user_names.extend(names)
     print(user_names)
+    # print('Loading data....')
+    # global user_encodings, user_names
+    # loaded_data = load_data_from_json()
+    # print("Data loaded:")
+    # user_encodings = loaded_data.get("user_encodings", [])
+    # user_names = loaded_data.get("user_names", [])
+    # print(user_names)
             
 # Flag to check if camera is open
 camera_opened = True
@@ -79,11 +98,12 @@ def camera_thread():
 
     # video_capture.release()
     # Load known faces and their encodings
+    global face_detection_encodings
     global user_encodings, user_names
     known_faces_encodings = []
     known_faces_names = []
     found_name = ""
-    skipped_frame = 12
+    skipped_frame = 6
     frame_index = 0
 
 
@@ -94,39 +114,55 @@ def camera_thread():
     video_capture = cv2.VideoCapture(0)
 
     while camera_opened:
+        live_time = datetime.datetime.now().strftime("%Y/%m/%d-%H:%M:%S")
         ret, _frame0 = video_capture.read()
         # _frame = cv2.resize(_frame0, (320, 240))
-        _frame = cv2.resize(_frame0, (640, 480))
-        frame = cv2.flip(_frame, 1)
+        # _frame = cv2.resize(_frame0, (640, 480))
+        frame = cv2.flip(_frame0, 1)
 
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        # put time
+        cv2.putText(rgb_frame,live_time , (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 165, 0), 2)
     
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # , model='hog'
+        face_locations = face_recognition.face_locations(rgb_frame, number_of_times_to_upsample = 1, model='hog')
+        for (top, right, bottom, left) in face_locations:
+                cv2.rectangle(rgb_frame, (left, top), (right, bottom), (255, 165, 0), 2)
+                # break
 
         if(frame_index >= skipped_frame):
+            face_detection_encodings = []
             frame_index = 0
             found_name="Unknown"
             # Find all face locations and encodings in the current frame
-            face_locations = face_recognition.face_locations(rgb_frame, number_of_times_to_upsample = 1)
             # faces = [(242, 407, 428, 221)]
             # print(face_locations)
             # log('-'.join(face_locations))
             # log("-".join(["".join(str(x)) for x in face_locations]))
-
+            
+            
             if face_locations:
-                top = face_locations[0][0]  # Top coordinate
-                right = face_locations[0][1]  # Right coordinate
-                bottom = face_locations[0][2]  # Bottom coordinate
-                left = face_locations[0][3]  # Left coordinate
+                # top = face_locations[0][0]  # Top coordinate
+                # right = face_locations[0][1]  # Right coordinate
+                # bottom = face_locations[0][2]  # Bottom coordinate
+                # left = face_locations[0][3]  # Left coordinate
                 # detected_face = gray_frame[y:y+h, x:x+w]
                 # detected_face = gray_frame[top:bottom, left:right]
+                # facesv1 = [item[0] for item in faces]
+                # [face_locations[0]]
                 face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+                face_detection_encodings = face_encodings
                 # print(face_encodings)
                 
                 if(face_encodings):
-                    face_encoding = face_encodings[0]
-                    # Loop through each face found in the frame
-                    for (top, right, bottom, left) in face_locations:
+                    # face_encoding = face_encodings[0]
+                    for(face_encoding) in face_encodings:
+                        found_name = 'Unknown'
+                        # Loop through each face found in the frame
+                        # for (top, right, bottom, left) in face_locations:
                         # See if the face matches any known faces
                         matches = face_recognition.compare_faces(user_encodings, face_encoding, tolerance=0.4)
 
@@ -134,8 +170,20 @@ def camera_thread():
                         if True in matches:
                             first_match_index = matches.index(True)
                             found_name = user_names[first_match_index]
-                            break
-                log(text = found_name)
+                            # cv2.putText(rgb_frame,found_name , (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 165, 0), 2)
+                        
+                        log(text = live_time + ':  '+found_name) 
+                        on_found_name(found_name)
+                        # TODO: implement found name here
+                #             # For case one person/screen 
+                #             # Check if we found a match
+                #             if True in matches:
+                #                 first_match_index = matches.index(True)
+                #                 found_name = user_names[first_match_index]
+                #                 # draw name on camera
+                #                 cv2.putText(rgb_frame,found_name , (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 165, 0), 2)
+                #                 # break
+                # log(text = live_time + ':  '+found_name)
             else:
                 log(text = 'No one here')
         else:
@@ -158,6 +206,16 @@ def camera_thread():
     # Release the video capture object and close the OpenCV windows
     video_capture.release()
     cv2.destroyAllWindows()
+
+def on_found_name(found_name):
+    print(found_name) 
+    if(found_name == 'Unknown'):
+        # TODO:
+        count_unknown=1
+    else:
+        # TODO:
+        count_unknown=1
+    
 
 # Function to handle login button click
 def login_clicked():
@@ -192,10 +250,12 @@ def confirm_exit(event):
         if confirm:
             close_camera()
 
+# init_knowns_faces()
 # Init known faces
 init_knowns_faces()
 # init_knowns_faces_thread=threading.Thread(target=init_knowns_faces)
 # init_knowns_faces_thread.start()
+
 
 # Create main window
 root = Tk()
@@ -237,15 +297,24 @@ log_label = Label(left_frame, text='Logs...')
 log_label.grid(row=4, columnspan=2,  pady=10 )
 
 
+# # Init known faces
+# # init_knowns_faces()
+# init_knowns_faces_thread=threading.Thread(target=init_knowns_faces)
+# init_knowns_faces_thread.start()
+
 # Start camera thread
 camera_thread = threading.Thread(target=camera_thread)
 camera_thread.start()
+
+# compare_faces_thread = threading.Thread(target=compare_faces)
+# compare_faces_thread.start()
 
 # Bind closing event to the window
 root.protocol("WM_DELETE_WINDOW", close_camera)
 
 # Bind Ctrl + q to confirm exit
 root.bind_all("<Control-q>", confirm_exit)
+
 
 root.mainloop()
 
