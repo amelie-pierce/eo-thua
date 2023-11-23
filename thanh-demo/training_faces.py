@@ -60,7 +60,7 @@ def start_face_detection():
             countdown_text = f"Capture in: {countdown}"
             cv2.putText(frame, countdown_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             cv2.imshow('Face Detection', frame)
-            time.sleep(1)
+            # time.sleep(1)
             countdown -= 1
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
