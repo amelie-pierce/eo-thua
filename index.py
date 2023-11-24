@@ -125,7 +125,7 @@ def close_form():
 
 
 def start_scan():
-    subprocess.run(["python3", "main.py"])
+    subprocess.run(["python3", "smooth_main.py"])
 
 def update_button_states(arg):
     if name_entry.get():

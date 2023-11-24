@@ -112,8 +112,8 @@ def smooth_camera():
             if not ret:
                 continue
             # _frame = cv2.resize(_frame0, (320, 240))
-            # _frame = cv2.resize(_frame0, (640, 480))
-            frame = cv2.flip(_frame0, 1)
+            frame = cv2.resize(_frame0, (640, 480))
+            # frame = cv2.flip(_frame0, 1)
             frame.flags.writeable = False
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
