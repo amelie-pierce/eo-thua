@@ -78,7 +78,7 @@ def start_face_detection():
             # Draw rectangles around detected faces
             cv2.rectangle(frame, (left, top), (right, bottom), (255, 165, 0), 2)
 
-            if(last_second < 0 or last_second >= 59):
+            if(last_second < 0 or last_second >= 58):
                 last_second = cur_second
             if(cur_second - last_second >= delay_time_second):
                 # Save the detected face as an image with the given name

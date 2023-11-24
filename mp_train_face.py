@@ -137,7 +137,7 @@ def start_face_detection():
                             if(len(eyes) == 1 or len(eyes) == 2):
                                 # draw rectangle around face
                                 cv2.rectangle(init_frame, rect_start_point, rect_end_point, (255, 165, 0), 2)
-                                if(last_second < 0 or last_second >= 59):
+                                if(last_second < 0 or last_second >= 58):
                                     last_second = cur_second
 
                                 if(cur_second - last_second >= delay_time_second):
@@ -227,7 +227,7 @@ def start_face_detection():
             #     # Draw rectangles around detected faces
             #     cv2.rectangle(frame, (left, top), (right, bottom), (255, 0, 0), 2)
 
-            #     if(last_second < 0 or last_second >= 59):
+            #     if(last_second < 0 or last_second >= 58):
             #         last_second = cur_second
 
             #     if(cur_second - last_second >= delay_time_second):
