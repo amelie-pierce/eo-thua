@@ -32,7 +32,7 @@ tolerance=0.4
 
 # for live camera
 global rgb_frame, live_time, detection_tolerance, video_capture
-detection_tolerance = 0.9
+detection_tolerance = 0.99
 rgb_frame = None
 video_capture = None
 
@@ -124,7 +124,36 @@ def smooth_camera():
             results = face_detection.process(rgb_frame)
             if results.detections:
                 for detection in results.detections:
-                    mp_drawing.draw_detection(rgb_frame, detection)
+                    # mp_drawing.draw_detection(rgb_frame, detection)
+                    location = detection.location_data
+                    if location.HasField('relative_bounding_box'):
+                        image_rows, image_cols, _ = rgb_frame.shape
+                        rbb_box = location.relative_bounding_box
+                        rect_start_point = _normalized_to_pixel_coordinates(
+                            rbb_box.xmin, rbb_box.ymin, image_cols,
+                            image_rows)
+                        rect_end_point = _normalized_to_pixel_coordinates(
+                            rbb_box.xmin + rbb_box.width,
+                            rbb_box.ymin + rbb_box.height, image_cols,
+                            image_rows)
+                        # // (263, 202) (475, 414)
+                        # print(rect_start_point, rect_end_point)
+                        
+                        
+                        # Eyes/mouth detect 
+                        if (rect_start_point is not None and rect_end_point is not None and isinstance(rect_start_point, tuple) and isinstance(rect_end_point, tuple) and len(rect_start_point) == 2 and len(rect_end_point) == 2):
+                            # Extract x, y, w, h only if the points are not None
+                            x = rect_start_point[0] if rect_start_point[0] is not None else 0
+                            y = rect_start_point[1] if rect_start_point[1] is not None else 0
+                            w = rect_end_point[0] - x if rect_end_point[0] is not None else 0
+                            h = rect_end_point[1] - y if rect_end_point[1] is not None else 0
+                            
+                            face_gray = rgb_frame[y:y+h, x:x+w]
+                            eyes = eye_cascade.detectMultiScale(face_gray, scaleFactor=1.1, minNeighbors=3)
+                            # print(len(eyes))
+                            if(len(eyes) == 1 or len(eyes) == 2):
+                                # draw rectangle around face
+                                cv2.rectangle(rgb_frame, rect_start_point, rect_end_point, (255, 165, 0), 2)
                    
             frame = Image.fromarray(rgb_frame)
             frame = ImageTk.PhotoImage(image=frame)
@@ -177,6 +206,8 @@ def camera_thread():
         if rgb_frame is None:
                 continue
         
+        small_rgb_frame = rgb_frame # cv2.resize(rgb_frame, (120, 90))
+        
         # put time
         # cv2.putText(rgb_frame,live_time , (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 165, 0), 2)
     
@@ -189,7 +220,7 @@ def camera_thread():
         
         # gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # , model='hog'
-        face_locations = face_recognition.face_locations(rgb_frame, number_of_times_to_upsample = 1, model='hog')
+        face_locations = face_recognition.face_locations(small_rgb_frame, number_of_times_to_upsample = 1, model='hog')
         # for (top, right, bottom, left) in face_locations:
         #         cv2.rectangle(rgb_frame, (left, top), (right, bottom), (255, 165, 0), 2)
                 # break
@@ -216,7 +247,7 @@ def camera_thread():
                 # detected_face = gray_frame[top:bottom, left:right]
                 # facesv1 = [item[0] for item in faces]
                 # [face_locations[0]]
-                face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+                face_encodings = face_recognition.face_encodings(small_rgb_frame, face_locations)
                 # face_detection_encodings = face_encodings
                 # print(face_encodings)
                 
