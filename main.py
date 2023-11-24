@@ -20,6 +20,7 @@ detected_times = 2
 skipped_frame = 4
 # less tolerance => high accuracy compare faces
 tolerance=0.4
+video_capture = None
 
 # Function to load images and perform face recognition
 def recognize_faces_in_folder(folder_path):
@@ -217,7 +218,8 @@ def camera_thread():
             break
 
     # Release the video capture object and close the OpenCV windows
-    video_capture.release()
+    if video_capture is not None:
+        video_capture.release()
     cv2.destroyAllWindows()
 
 def update_count(found_name):

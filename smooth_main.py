@@ -31,9 +31,10 @@ skipped_frame = 4
 tolerance=0.4
 
 # for live camera
-global rgb_frame, live_time, detection_tolerance
-detection_tolerance = 0.99
+global rgb_frame, live_time, detection_tolerance, video_capture
+detection_tolerance = 0.9
 rgb_frame = None
+video_capture = None
 
 ####
 
@@ -111,6 +112,8 @@ def smooth_camera():
             ret, _frame0 = video_capture.read()
             if not ret:
                 continue
+            if(not ready):
+                continue
             # _frame = cv2.resize(_frame0, (320, 240))
             frame = cv2.resize(_frame0, (640, 480))
             # frame = cv2.flip(_frame0, 1)
@@ -130,8 +133,7 @@ def smooth_camera():
 
 # Function for the camera thread
 def camera_thread():
-    global video_capture, user_encodings, user_names, ready, camera_opened, skipped_frame, tolerance
-    global live_time, rgb_frame
+    global video_capture, user_encodings, user_names, ready, camera_opened, skipped_frame, tolerance, live_time, rgb_frame
     # video_capture = cv2.VideoCapture(0)
 
     # while camera_opened:
@@ -265,7 +267,8 @@ def camera_thread():
             break
 
     # Release the video capture object and close the OpenCV windows
-    video_capture.release()
+    if video_capture is not None:
+        video_capture.release()
     cv2.destroyAllWindows()
 
 def update_count(found_name):
